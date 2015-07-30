@@ -6,7 +6,7 @@
 
   ------------------------------------------------------------------------------
   Copyright 2015 Robert B. Hawkins
-  Distributed inder the MIT License
+  Distributed under the MIT License
   (see accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
   ------------------------------------------------------------------------------
 

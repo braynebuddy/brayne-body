@@ -5,7 +5,7 @@
 
   ------------------------------------------------------------------------------
   Copyright 2015 Robert B. Hawkins
-  Distributed inder the MIT License
+  Distributed under the MIT License
   (see accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
   ------------------------------------------------------------------------------
 
@@ -132,6 +132,6 @@ void botLeftTurn(int distance, int theta)
 {
   distance = distance * 10000 / 325;
   rightSpeed = botSpeed *(distance - 1539) / (distance - 3077);
-  leftSpeed = botSpeed * (distance - 4615) / (distance - 3077):
+  leftSpeed = botSpeed * (distance - 4615) / (distance - 3077);
   botSpeed = (rightSpeed + leftSpeed) / 2;
 }    
