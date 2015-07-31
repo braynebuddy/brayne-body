@@ -19,7 +19,8 @@
 
 int main()                                    // Main function
 {
-  int normalSpeed = 64;
+  int normalSpeed = 128;                       // ticks/second -- 64 ticks = 1 revolution, max is 128
+  int normalRampRate = 12;                    // ticks/sec per 20ms (default is 4)
   int dFront;
   int d;
   int dMax;
@@ -33,38 +34,65 @@ int main()                                    // Main function
 
   // Set up some variables we will need
   print("%c", HOME);
-  botSetMaxSpeed(64);                          // ticks/second -- 64 ticks = 1 revolution, max is 128
-  botSetRampRate(12);                          // ticks/sec per 20ms (default is 4)
+  botSetMaxSpeed(normalSpeed);
+  botSetRampRate(normalRampRate);
 
   pingAngle(0);
-  botSetSpeed(normalSpeed);                         // Start Bot moving at desired speed
+  // Find the best direction to go
+  for (int i = 0; i < aLen ; i++) {
+    d = pingAngle(a[i]);
+    print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
+    if (d > dMax) {
+      dMax = d;
+      aMax = i;
+    }
+  }        
+  botTurnAngle(a[aMax]);                      // Turn in best direction
+  botSetSpeed(normalSpeed);                   // Start Bot moving at desired speed
   
   while(1)
   {
-    if (irLeft()  && !irRight()) botTurnHeading(-200, 1);
-    if (irRight() && !irLeft())  botTurnHeading( 200, 1);
+    //if (irLeft()  && !irRight()) botTurnHeading(-200, 1);
+    //if (irRight() && !irLeft())  botTurnHeading( 200, 1);
 
     // Check for obstacles
     dFront = pingAngle(0);
-    if (dFront < 30) {
+    if (dFront < 10) {
       // Obstacle ahead, so slow down and find a good direction
-      botSetSpeed(normalSpeed/4);
-      dMax = 0;        
-      for (int i = 0; i < aLen ; i++) {
-        d = pingAngle(a[i]);
-        print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
-        if (d > dMax) {
-          dMax = d;
-          aMax = i;
+      freqout(4, 100, 3000);
+      botSetSpeed(0);
+      botMove(-1);
+      dMax = 0;
+      while (dMax < 10)
+      {
+        for (int i = 0; i < aLen ; i++) {
+          d = pingAngle(a[i]);
+          print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
+          if (d > dMax) {
+            dMax = d;
+            aMax = i;
+          }
+        }        
+        if (dMax < 10) {
+          freqout(4, 100, 3000);
+          freqout(4, 100, 3000);
+          botMove(-2);
+          botTurnAngle(a[aMax]);
         }
-      }        
+      }
       // Turn in best direction
-      botTurnHeading(a[aMax], 1);
+      botTurnAngle(a[aMax]);
+      // Get a new distance, and go!
+      dFront = pingAngle(0);
       botSetSpeed(normalSpeed);                              
     }
 
-    if (dFront < 10){
-      // Emergency! Stop and turn around.
+    if (dFront < 4){
+      // Emergency! Stop, backup 1 cm, and turn around.
+      freqout(4, 100, 3000);
+      freqout(4, 100, 3000);
+      freqout(4, 100, 3000);
+      botMove(-6);
       botTurnAngle(1800);
       //  Look for a better path.
       dMax = 0;        

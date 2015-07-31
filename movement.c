@@ -31,7 +31,7 @@ int turnTicks(int a)
   // counter-clockwise).
 
   // For the ActivityBot, Turning radius is 105.8 mm, so turning circle
-  // in 664.761 mm. Encoder ticks are 3.25 ticks/mm, so 204.542 ticks will
+  // in 664.761 mm. Encoder ticks are 3.25 mm/tick, so 204.542 ticks will
   // produce 360 degrees of turning.
 
   int t;
@@ -121,6 +121,14 @@ void botSetSpeed(int s)
   rightSpeed = s;
   
   drive_ramp(leftSpeed, rightSpeed);
+}
+
+void botMove(int cm)
+{
+  // Encoder ticks are 3.25 mm/tick, so 3.25 cm = 10 ticks, or 13 cm = 40 ticks
+  int ticks = cm * 40 / 13;
+
+  drive_goto(ticks, ticks);
 }
 
 void botToPose(int x, int y, int theta)
