@@ -4,4 +4,8 @@ int pingAngle(int angle);
 int irLeft();
 int irRight();
 
+int *startSensor();
+void stopSensor();
+void updateSensor();
+
 volatile extern int pingerAngle;

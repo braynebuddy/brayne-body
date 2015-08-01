@@ -37,13 +37,15 @@ int turnTicks(int a)
   int t;
 
   // adjust angle to be -180 to + 180 range
-  while (a > 1800)
-    a = a - 3600;
-  while (a < -1800)
-    a = a + 3600;
+  //a = 10 * a; // convert to tenths of a degree
+  while (a > 180)
+    a = a - 360;
+  while (a < -180)
+    a = a + 360;
 
   // calculate right-wheel delta ticks to turn by angle 'a'
-  t = (10*a + 88) / 176; // 1 tick = 360/204.542 = 1.76 degrees. This formula has < 1 deg error.
+  //t = (10*a + 88) / 176; // 1 tick = 360/204.542 = 1.76 degrees. This formula has < 1 deg error.
+  t = (int)((float)a / 1.76 + 0.5);
 
   return (t);
 }
@@ -123,10 +125,12 @@ void botSetSpeed(int s)
   drive_ramp(leftSpeed, rightSpeed);
 }
 
-void botMove(int cm)
+void botMove(int mm)
 {
-  // Encoder ticks are 3.25 mm/tick, so 3.25 cm = 10 ticks, or 13 cm = 40 ticks
-  int ticks = cm * 40 / 13;
+  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
+  int ticks = mm * 4 / 13;
+
+  //ticks = (int)((float)mm/3.25 + 0.5);
 
   drive_goto(ticks, ticks);
 }
