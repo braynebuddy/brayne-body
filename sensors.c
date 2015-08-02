@@ -71,8 +71,8 @@ int pingAngle(int angle)
 
   // Allow time for sensor to move
   deltaAngle = pingerAngle > angle ? pingerAngle-angle : angle-pingerAngle;
-  if (deltaAngle > 100) 
-    pause(deltaAngle);
+//  print("pingerAngle = %d, angle = %d, deltaAngle = %d %c\n", pingerAngle, angle, deltaAngle, CLREOL);
+  if(deltaAngle > 10) pause(deltaAngle/2);
 
   pingerAngle = angle;
 

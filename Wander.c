@@ -20,12 +20,15 @@
 int main()                                    // Main function
 {
   int normalSpeed = 32;                       // ticks/second -- 64 ticks = 1 revolution, max is 128
-  int normalRampRate = 12;                    // ticks/sec per 20ms (default is 4)
+  int normalRampRate = 2;                     // ticks/sec per 20ms (default is 4)
+  int loopPause = 500;                        // pause at end of scan loop
+  int minApproach = 2 * ((normalSpeed * 13 / 4) * loopPause / 1000) / 10;
   int dFront;
   int d;
   int dMax;
   int aMax;
-  int a[] = {-90, -60, -30, 30, 60, 90, 0};
+  //int a[] = {-90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+  int a[] = {-90, 90, 0};
   int aLen = sizeof(a) / sizeof(*a);
 
   // Send out startup announcement
@@ -33,12 +36,14 @@ int main()                                    // Main function
   freqout(4, 250, 3500);
 
   // Set up some variables we will need
-  print("%c", HOME);
   botSetMaxSpeed(normalSpeed);
   botSetRampRate(normalRampRate);
 
   pingAngle(0);
   // Find the best direction to go
+  //while (1) { // for testing  
+  //pause(1000);
+  print("%c", HOME);
   for (int i = 0; i < aLen ; i++) {
     d = pingAngle(a[i]);
     print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
@@ -46,7 +51,8 @@ int main()                                    // Main function
       dMax = d;
       aMax = a[i];
     }
-  }        
+  }
+  //} // end of while(1) for testing 
   botTurnAngle(aMax);                         // Turn in best direction
   botSetSpeed(normalSpeed);                   // Start Bot moving at desired speed
   
@@ -57,13 +63,13 @@ int main()                                    // Main function
 
     // Check for obstacles
     dFront = pingAngle(0);
-    if (dFront < 10) {
+    if (dFront < minApproach) {
       // Obstacle ahead, so stop and find a good direction
       freqout(4, 100, 3000);
       botSetSpeed(0);
-      botMove(-20); // move back 20 mm
+      botMove(-5 * minApproach); // move back minApproach/2 cm
       dMax = 0;
-      while (dMax < 10)
+      while (dMax < 2 * minApproach)
       {
         for (int i = 0; i < aLen ; i++) {
           d = pingAngle(a[i]);
@@ -73,11 +79,11 @@ int main()                                    // Main function
             aMax = a[i];
           }
         }        
-        if (dMax < 10) {
+        if (dMax < 2 * minApproach) {
           freqout(4, 100, 3000);
           freqout(4, 100, 3000);
-          botMove(-50);
-          botTurnAngle(aMax);
+          //botMove(-50);
+          botTurnAngle(180);
         }
       }
       // Turn in best direction
@@ -87,14 +93,14 @@ int main()                                    // Main function
       botSetSpeed(normalSpeed);                              
     }
 
-    if (dFront < 4){
+    if (dFront < minApproach / 2 ){
       // Emergency!
       freqout(4, 100, 3000);
       freqout(4, 100, 3000);
       freqout(4, 100, 3000);
       // Stop, backup 15 cm, and turn around.
       botSetSpeed(0);
-      botMove(-150);
+      botMove(-30 * minApproach);
       botTurnAngle(180);
       //  Look for a better path.
       dMax = 0;        
@@ -109,10 +115,6 @@ int main()                                    // Main function
       botTurnAngle(aMax);
       botSetSpeed(normalSpeed);
     }        
-
-    // Add main loop code here.
-    //print("main: turning 90 degr");
-    //botTurnHeading(900, 5);
-    //pause(3000);
+    pause(500);
   }                             // end of while(1) loop  
 }                               // end of main()
