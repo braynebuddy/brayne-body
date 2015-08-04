@@ -39,82 +39,82 @@ int main()                                    // Main function
   botSetMaxSpeed(normalSpeed);
   botSetRampRate(normalRampRate);
 
-  pingAngle(0);
-  // Find the best direction to go
+  startSensor();                              // Start scanning
+
   //while (1) { // for testing  
   //pause(1000);
-  print("%c", HOME);
-  for (int i = 0; i < aLen ; i++) {
-    d = pingAngle(a[i]);
-    print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
-    if (d > dMax) {
-      dMax = d;
-      aMax = a[i];
+  //print("%c", HOME);
+
+  // Find the best direction to go
+  if (pingFront < 5 * minApproach) {
+    if (!detectLeft) {
+      botTurnAngle(90);
+    }
+    else if (!detectRight) {
+      botTurnAngle(-90);
+    }
+    else {
+      botTurnAngle(180);
     }
   }
   //} // end of while(1) for testing 
-  botTurnAngle(aMax);                         // Turn in best direction
   botSetSpeed(normalSpeed);                   // Start Bot moving at desired speed
   
   while(1)
   {
-    //if (irLeft()  && !irRight()) botTurnHeading(-200, 1);
-    //if (irRight() && !irLeft())  botTurnHeading( 200, 1);
-
-    // Check for obstacles
-    dFront = pingAngle(0);
-    if (dFront < minApproach) {
-      // Obstacle ahead, so stop and find a good direction
-      freqout(4, 100, 3000);
-      botSetSpeed(0);
-      botMove(-5 * minApproach); // move back minApproach/2 cm
-      dMax = 0;
-      while (dMax < 2 * minApproach)
-      {
-        for (int i = 0; i < aLen ; i++) {
-          d = pingAngle(a[i]);
-          print("angle = %d, distance = %d %c\n", a[i], d, CLREOL);
-          if (d > dMax) {
-            dMax = d;
-            aMax = a[i];
-          }
-        }        
-        if (dMax < 2 * minApproach) {
-          freqout(4, 100, 3000);
-          freqout(4, 100, 3000);
-          //botMove(-50);
-          botTurnAngle(180);
+    // First make sure we're not about to run into something
+    if (pingFront < minApproach) {
+      // Obstacle ahead
+      freqout(4, 100, 3500);
+      freqout(4, 100, 3500);
+      if (!detectLeft) {
+        botTurnAngle(90);
+      } else if (!detectRight) {
+        botTurnAngle(-90);
+      } else {
+        botTurnAngle(180);
+      }
+      botSetSpeed(normalSpeed);
+    }
+/*
+    // Now see if we need to track a wall on the left or right.
+    if (detectLeft & detectRight) {
+      // In a narrow hallway, so try to stay in the middle
+      freqout(4, 100, 2500);
+      freqout(4, 100, 2500);
+      if ((pingLeft-pingRight) > 1) {
+        // Turn left by setting speed delta positive
+        botSetDeltaSpeed(4);
+      } else if ((pingLeft-pingRight) < -1){
+        // Turn right by setting speed delta negative
+        botSetDeltaSpeed(-4);
+      } else {
+        // No turning
+        botSetDeltaSpeed(0);
+      }
+    } 
+    else {
+      if (detectLeft) {
+        freqout(4, 100, 2500);
+        freqout(4, 100, 3500);
+        // Obstacle on left
+        if (pingLeft < 10) {
+          // Turn right by setting speed delta negative
+          botSetDeltaSpeed(-4);
         }
       }
-      // Turn in best direction
-      botTurnAngle(aMax);
-      // Get a new distance, and go!
-      dFront = pingAngle(0);
-      botSetSpeed(normalSpeed);                              
-    }
-
-    if (dFront < minApproach / 2 ){
-      // Emergency!
-      freqout(4, 100, 3000);
-      freqout(4, 100, 3000);
-      freqout(4, 100, 3000);
-      // Stop, backup 15 cm, and turn around.
-      botSetSpeed(0);
-      botMove(-30 * minApproach);
-      botTurnAngle(180);
-      //  Look for a better path.
-      dMax = 0;        
-      for (int i = 0; i < aLen ; i++) {
-        d = pingAngle(a[i]);
-        if (d > dMax) {
-          dMax = d;
-          aMax = a[i];
+      if (detectRight) {
+        // Obstacle on right
+        freqout(4, 100, 3500);
+        freqout(4, 100, 2500);
+        if (pingRight < 10) {
+          // Turn left by setting speed delta positive
+          botSetDeltaSpeed(4);
         }
-      }        
-      // Turn in best direction and go
-      botTurnAngle(aMax);
-      botSetSpeed(normalSpeed);
-    }        
+      }
+    }
+    freqout(4, 100, 2000);
     pause(500);
+*/
   }                             // end of while(1) loop  
 }                               // end of main()

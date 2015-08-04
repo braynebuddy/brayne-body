@@ -13,7 +13,8 @@
   ==========  ====  ==================================================
   2015-07-17   1.0  Separate turnAngle() into it's own file, correct 
                     coordinate frames to us bot reference.
-  2015-07-18   2.0  Start from turnAngle() function 
+  2015-07-18   2.0  Start from turnAngle() function
+  2015-08-02   2.1  Convert speed from ticks/sec to cm/sec
 
 */
 #include "simpletools.h"                      // Include simpletools header
@@ -69,6 +70,26 @@ void botTurnAngle(int a)
   drive_goto(l_ticks, r_ticks); // Turn in place
 }
 
+void botRotation(int omega)
+{
+  // Set the ActivityBot's rate of rotation to omega degrees/sec
+  // The ActivityBot width is 105.8 mm, or 32.554 ticks
+  // omega = (rightSpeed - leftSpeed) / botWidth
+  // so,
+  // rightSpeed - leftSpeed = deltaSpeed = omega * botWidth
+  // rightSpeed = botSpeed + deltaSpeed / 2
+  // leftSpeed =  rightSpeed - deltaSpeed
+
+  // convert to radians
+  float omega_r = (float)omega / 57.2957795;
+  int deltaSpeed = (int)(omega_r * 32.544 + 0.5);
+  rightSpeed = botSpeed + deltaSpeed/2;
+  leftSpeed = rightSpeed - deltaSpeed;
+  botSpeed = (rightSpeed + leftSpeed)/2;
+
+  drive_ramp(leftSpeed, rightSpeed);
+}
+
 void botTurnHeading(int angle, int duration)
 {
   int ticks = 0;
@@ -105,19 +126,32 @@ void botTurnHeading(int angle, int duration)
 
 void botSetMaxSpeed(int s)
 {
-  print("botSetMaxSpeed: s = %d %c\n", s, CLREOL);
-  drive_setMaxSpeed(s);
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  //print("botSetMaxSpeed: s = %d cm/sec %c\n", s, CLREOL);
+  drive_setMaxSpeed(s*40/13);
 }  
 
 void botSetRampRate(int r)
 {
-  print("botSetRampRate: r = %d %c\n", r, CLREOL);
-  drive_setRampStep(r);
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  //print("botSetRampRate: r = %d cm/sec/sec %c\n", r, CLREOL);
+  drive_setRampStep(r*40/13);
 }
 
+void botSetDeltaSpeed(int d)
+{
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  d = d * 40/13;
+  botSpeed = (rightSpeed + leftSpeed)/2;
+  rightSpeed = botSpeed + d/2;
+  leftSpeed = rightSpeed - d;
+  botSpeed = (rightSpeed + leftSpeed)/2;
+
+  drive_ramp(leftSpeed, rightSpeed);
+}
 void botSetSpeed(int s)
 {
-  print("botSetSpeed: s = %d ticks/sec%c\n", s, CLREOL);
+  //print("botSetSpeed: s = %d ticks/sec%c\n", s, CLREOL);
   botSpeed = s;
   leftSpeed = s;
   rightSpeed = s;
@@ -125,10 +159,10 @@ void botSetSpeed(int s)
   drive_ramp(leftSpeed, rightSpeed);
 }
 
-void botMove(int mm)
+void botMove(int cm)
 {
-  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
-  int ticks = mm * 4 / 13;
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  int ticks = cm * 40 / 13;
 
   //ticks = (int)((float)mm/3.25 + 0.5);
 
