@@ -19,6 +19,13 @@
 */
 #include "simpletools.h"                      // Include simpletools header
 #include "abdrive.h"                          // Include abdrive header
+#include <math.h>                             // Needed for atan2()
+
+#define round(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif 
 
 volatile int botSpeed;
 volatile int leftSpeed;
@@ -127,6 +134,7 @@ void botTurnHeading(int angle, int duration)
 void botSetMaxSpeed(int s)
 {
   // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  // Min speed is 1 tick/sec = 3 mm/sec. Max speed is 128 ticks/sec = 417 mm/sec
   //print("botSetMaxSpeed: s = %d cm/sec %c\n", s, CLREOL);
   drive_setMaxSpeed(s*40/13);
 }  
@@ -181,3 +189,50 @@ void botLeftTurn(int distance, int theta)
   leftSpeed = botSpeed * (distance - 4615) / (distance - 3077);
   botSpeed = (rightSpeed + leftSpeed) / 2;
 }    
+
+void botSetVW(float velocity, float omega)
+{
+  // Set wheel speeds so that ActivityBot moves at linear velocity (mm/s)
+  // and angular velocity omega (rad/s)
+  float L = 105.8;  // Wheel spacing = 105.8 mm
+  float R = 33.1;   // Wheel radius = 33.1 mm
+  float leftVelocity;
+  float rightVelocity;
+
+  if (velocity < 3.25) velocity = 0.0;
+  rightVelocity = (2.0*velocity + omega*L) / (2.0 * R); // vR [=] cm/sec
+  rightSpeed = round(rightVelocity / 3.25); // 1 tick = 3.25 mm
+
+  leftVelocity = (2.0*velocity - omega*L) / (2.0 * R);  // vL [=] cm/sec
+  leftSpeed = round(leftVelocity / 3.25); // 1 tick = 3.25 mm
+  botSpeed = (rightSpeed + leftSpeed) / 2; 
+
+  drive_ramp(leftSpeed, rightSpeed); 
+}
+
+float pid_omega(float deltaX, float deltaY, float omega0)
+{
+  float Kc = -0.5;
+  float Ki = 0.0;
+  float Kd = 0.0;
+
+  static float e_sum = 0.0;
+  static float old_e = 0.0;
+
+  float e;
+  float e_dot;
+  float delta_omega;
+
+  e = omega0 - atan2(deltaX, deltaY);
+  if (e < -M_PI) e = e + 2.0*M_PI;
+  if (e >  M_PI) e = e - 2.0*M_PI;
+
+  e_dot = e - old_e;
+  old_e = e;
+
+  e_sum += e;
+
+  delta_omega = Kc * e + Ki * e_sum + Kd * e_dot;
+
+  return delta_omega;
+} 
