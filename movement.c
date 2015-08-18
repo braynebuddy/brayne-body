@@ -15,6 +15,7 @@
                     coordinate frames to us bot reference.
   2015-07-18   2.0  Start from turnAngle() function
   2015-08-02   2.1  Convert speed from ticks/sec to cm/sec
+  2015-08-17   2.2  Convert to mm/s, add control functions
 
 */
 #include "simpletools.h"                      // Include simpletools header
@@ -27,6 +28,7 @@
 #define M_PI 3.14159265358979323846
 #endif 
 
+volatile int botMaxSpeed;
 volatile int botSpeed;
 volatile int leftSpeed;
 volatile int rightSpeed;
@@ -133,23 +135,24 @@ void botTurnHeading(int angle, int duration)
 
 void botSetMaxSpeed(int s)
 {
-  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
   // Min speed is 1 tick/sec = 3 mm/sec. Max speed is 128 ticks/sec = 417 mm/sec
   //print("botSetMaxSpeed: s = %d cm/sec %c\n", s, CLREOL);
-  drive_setMaxSpeed(s*40/13);
+  botMaxSpeed = s*4/13;
+  drive_setMaxSpeed(s*4/13);
 }  
 
 void botSetRampRate(int r)
 {
-  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
+  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
   //print("botSetRampRate: r = %d cm/sec/sec %c\n", r, CLREOL);
-  drive_setRampStep(r*40/13);
+  drive_setRampStep(r*4/13);
 }
 
 void botSetDeltaSpeed(int d)
 {
-  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
-  d = d * 40/13;
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 4 ticks
+  d = d * 4/13;
   botSpeed = (rightSpeed + leftSpeed)/2;
   rightSpeed = botSpeed + d/2;
   leftSpeed = rightSpeed - d;
@@ -167,10 +170,10 @@ void botSetSpeed(int s)
   drive_ramp(leftSpeed, rightSpeed);
 }
 
-void botMove(int cm)
+void botMove(int mm)
 {
-  // Encoder ticks are 3.25 mm/tick, so 13 cm = 40 ticks
-  int ticks = cm * 40 / 13;
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 4 ticks
+  int ticks = mm * 4 / 13;
 
   //ticks = (int)((float)mm/3.25 + 0.5);
 
@@ -210,7 +213,7 @@ void botSetVW(float velocity, float omega)
   drive_ramp(leftSpeed, rightSpeed); 
 }
 
-float pid_omega(float deltaX, float deltaY, float omega0)
+float pid_omega(float deltaX, float deltaY, float theta)
 {
   float Kc = -0.5;
   float Ki = 0.0;
@@ -221,9 +224,10 @@ float pid_omega(float deltaX, float deltaY, float omega0)
 
   float e;
   float e_dot;
-  float delta_omega;
+  float omega;
 
-  e = omega0 - atan2(deltaX, deltaY);
+  // Make sure |e| < PI
+  e = theta - atan2(deltaX, deltaY);
   if (e < -M_PI) e = e + 2.0*M_PI;
   if (e >  M_PI) e = e - 2.0*M_PI;
 
@@ -232,7 +236,7 @@ float pid_omega(float deltaX, float deltaY, float omega0)
 
   e_sum += e;
 
-  delta_omega = Kc * e + Ki * e_sum + Kd * e_dot;
+  omega = Kc * e + Ki * e_sum + Kd * e_dot;
 
-  return delta_omega;
+  return omega;
 } 
