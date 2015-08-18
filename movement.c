@@ -204,17 +204,20 @@ void botSetVW(float velocity, float omega)
 
   if (velocity < 3.25) velocity = 0.0;
   rightVelocity = (2.0*velocity + omega*L) / (2.0 * R); // vR [=] cm/sec
-  rightSpeed = round(rightVelocity / 3.25); // 1 tick = 3.25 mm
-
   leftVelocity = (2.0*velocity - omega*L) / (2.0 * R);  // vL [=] cm/sec
+
+  rightSpeed = round(rightVelocity / 3.25); // 1 tick = 3.25 mm
   leftSpeed = round(leftVelocity / 3.25); // 1 tick = 3.25 mm
+
   botSpeed = (rightSpeed + leftSpeed) / 2; 
 
   drive_ramp(leftSpeed, rightSpeed); 
 }
 
-float pid_omega(float deltaX, float deltaY, float theta)
+float pid_omega(float deltaX, float deltaY)
 {
+  // deltaX and deltaY are in bot coordinate frame, so current bot
+  // theta = 0 by definition.
   float Kc = -0.5;
   float Ki = 0.0;
   float Kd = 0.0;
@@ -227,7 +230,7 @@ float pid_omega(float deltaX, float deltaY, float theta)
   float omega;
 
   // Make sure |e| < PI
-  e = theta - atan2(deltaX, deltaY);
+  e = 0 - atan2(deltaX, deltaY);
   if (e < -M_PI) e = e + 2.0*M_PI;
   if (e >  M_PI) e = e - 2.0*M_PI;
 

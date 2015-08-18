@@ -12,6 +12,9 @@ void botSetRampRate(int r);
 void botSetSpeed(int s);
 void botSetDeltaSpeed(int d);
 
+void botSetVW(float velocity, float omega);
+float pid_omega(float deltaX, float deltaY, float theta);
+
 volatile extern int botSpeed;
 
 
