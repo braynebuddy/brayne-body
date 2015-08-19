@@ -9,6 +9,7 @@ int irRight();
 int *startSensor();
 void stopSensor();
 void updateSensor();
+void updatePose();
 
 volatile extern int pingerAngle;
 volatile extern int pingFront;
@@ -18,12 +19,11 @@ volatile extern int pingRight;
 volatile extern int detectLeft;
 volatile extern int detectRight;
 
-extern int ticksL;
-extern int ticksR;
+volatile extern int ticksL;
+volatile extern int ticksR;
 
-volatile extern int posX;
-volatile extern int posY;
-volatile extern int posTheta;
+volatile extern float botP[2];
+volatile extern float botTheta;
 
 extern int scanAngle[];
 extern int scan_cm[];

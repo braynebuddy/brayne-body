@@ -16,39 +16,59 @@
 #include "botports.h"                         // Ports in use for the ActivityBot
 #include "sensors.h"                          // Manage sensors in use on the ActivityBot
 #include "movement.h"                         // Move the ActivityBot around
+#include "transforms.h"                       // Coordinate frame transforms
 
 #define round(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
 
 int main()                                    // Main function
 {
-  float x = 0.0;        // Pose in world coordinate frame (x,y,theta)
-  float y = 0.0;
-  float theta = 0.0;
+  botP[0] = 0.0;     // Bot position and orientation in world coordinate frame (x,y)
+  botP[1] = 0.0;
+  botTheta = 0.0;
 
-  float gx = -100.0;    // Goal in world coordinate frame (gx,gy,gtheta)
-  float gy = 100.0;
-  float gtheta = 0.0;
+  float goalW[] = {500.0, 400};    // Goal in world coordinate frame (gx,gy)
+  float goalB[2];                   // Goal in Bot coordinate frame
+  float goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
+
+  float velocity;                   // Bot velocity in mm/s
+  float omega;                      // Bot angular rotation in 1/s
+
+  int cycle = 0;
 
   // Send out startup announcement
   freqout(4, 500, 3000);                      // Speaker tone: 0.5 s @ 3 kHz, 0.25 s @ 3.5 kHz
   freqout(4, 250, 3500);
 
   // Set up some variables we will need
-  botSetMaxSpeed(32);
-  botSetRampRate(4);
+  botSetMaxSpeed(64);
+  botSetRampRate(24);
+  pingAngle(0);
  
-  while(1)
+  while(goalD > 5.0)
   {
+    print("%c", HOME);
+    print("Cycle: %d%c\n", cycle, CLREOL);
+
     // update current pose in world coordinate frame
+    updatePose();
+    goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
+    print("bot at (%f,%f), theta: %f %c\n",botP[0], botP[1], botTheta, CLREOL);
 
     // calculate pose of goal in bot coordinate frame
+    aTb(goalW, goalB, botP[0], botP[1], botTheta);
+    print("goal at (%f,%f), theta: %f %c\n",goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
 
     // calculate omega
+    omega = pid_omega(goalB[0], goalB[1]);
+    print ("omega = %f%c\n",omega,CLREOL);
 
     // calculate maximum velocity for this omega
+    velocity = goalD<200.0 ? goalD/2.0 : 100.0;
 
     // set velocity and omega
+    botSetVW(velocity, omega);
 
-    pause(100);
+    print("Pausing...%c\n",CLREOL);
+    pause(500);
   } // End of while()
 } // End of main()

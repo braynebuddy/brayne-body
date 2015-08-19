@@ -18,9 +18,12 @@
   2015-08-17   2.2  Convert to mm/s, add control functions
 
 */
+#include <math.h>                             // Needed for atan2()
+
 #include "simpletools.h"                      // Include simpletools header
 #include "abdrive.h"                          // Include abdrive header
-#include <math.h>                             // Needed for atan2()
+#include "botports.h"                         // Ports in use for the ActivityBot
+#include "movement.h"                         // Move the ActivityBot around
 
 #define round(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
 
@@ -28,10 +31,10 @@
 #define M_PI 3.14159265358979323846
 #endif 
 
-volatile int botMaxSpeed;
-volatile int botSpeed;
-volatile int leftSpeed;
-volatile int rightSpeed;
+volatile int botMaxSpeed;   // ticks/s
+volatile int botSpeed;      // ticks/s
+volatile int leftSpeed;     // ticks/s
+volatile int rightSpeed;    // ticks/s
 
 int turnTicks(int a)
 {
@@ -193,33 +196,38 @@ void botLeftTurn(int distance, int theta)
   botSpeed = (rightSpeed + leftSpeed) / 2;
 }    
 
-void botSetVW(float velocity, float omega)
+void botSetVW(float vel, float omega)
 {
+  print("botSetVW:vel = %f omega = %f%c\n", vel, omega, CLREOL);
   // Set wheel speeds so that ActivityBot moves at linear velocity (mm/s)
   // and angular velocity omega (rad/s)
   float L = 105.8;  // Wheel spacing = 105.8 mm
   float R = 33.1;   // Wheel radius = 33.1 mm
-  float leftVelocity;
-  float rightVelocity;
+  float leftV;
+  float rightV;
 
-  if (velocity < 3.25) velocity = 0.0;
-  rightVelocity = (2.0*velocity + omega*L) / (2.0 * R); // vR [=] cm/sec
-  leftVelocity = (2.0*velocity - omega*L) / (2.0 * R);  // vL [=] cm/sec
+  //if (vel < 3.25) vel = 0.0;
+  rightV = vel + (omega*L/2.0); // vR [=] mm/sec
+  leftV = vel - (omega*L/2.0);  // vL [=] mm/sec
+  print ("botVelocity = %f (%f,%f)%c\n", vel, leftV, rightV, CLREOL);
 
-  rightSpeed = round(rightVelocity / 3.25); // 1 tick = 3.25 mm
-  leftSpeed = round(leftVelocity / 3.25); // 1 tick = 3.25 mm
+  rightSpeed = round(rightV / 3.25); // 1 tick = 3.25 mm
+  leftSpeed = round(leftV / 3.25);   // 1 tick = 3.25 mm
 
   botSpeed = (rightSpeed + leftSpeed) / 2; 
+  print ("botSpeed = %d (%d,%d)%c\n", botSpeed, leftSpeed, rightSpeed, CLREOL);
 
-  drive_ramp(leftSpeed, rightSpeed); 
+  drive_speed(leftSpeed, rightSpeed); 
+  print("botSetVW: done%c\n", CLREOL);
 }
 
 float pid_omega(float deltaX, float deltaY)
 {
+  print ("deltaX = %f deltaY = %f%c\n", deltaX, deltaY, CLREOL);
   // deltaX and deltaY are in bot coordinate frame, so current bot
   // theta = 0 by definition.
-  float Kc = -0.5;
-  float Ki = 0.0;
+  float Kc = -0.9;
+  float Ki = -0.02;
   float Kd = 0.0;
 
   static float e_sum = 0.0;
@@ -230,7 +238,7 @@ float pid_omega(float deltaX, float deltaY)
   float omega;
 
   // Make sure |e| < PI
-  e = 0 - atan2(deltaX, deltaY);
+  e = 0 - atan2(deltaY, deltaX);
   if (e < -M_PI) e = e + 2.0*M_PI;
   if (e >  M_PI) e = e - 2.0*M_PI;
 
@@ -239,6 +247,7 @@ float pid_omega(float deltaX, float deltaY)
 
   e_sum += e;
 
+  print ("e = %f, e_sum = %f, e_dot = %f%c\n", e, e_sum, e_dot, CLREOL);
   omega = Kc * e + Ki * e_sum + Kd * e_dot;
 
   return omega;

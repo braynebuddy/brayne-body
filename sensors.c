@@ -15,9 +15,11 @@
   2015-07-17   1.1  Assume incoming argument is in bot coordinate frame
                     (i.e., 0 degrees is straight ahead)
   2015-07-18   2.0  Include everything from IR sensors and PING)))
-  2015-07-31   2.1  Add cog launcher code 
+  2015-07-31   2.1  Add cog launcher code
+  2015-08-18   2.2  Add updatePose() 
 
 */
+#include <math.h>                             // Needed for sin(), cos (), atan2()
 
 #include "simpletools.h"                      // Include simpletools header
 #include "servo.h"                            // Include basic servo header
@@ -37,12 +39,11 @@ volatile int pingRight = 1000;
 volatile int detectLeft = 0;
 volatile int detectRight = 0;
 
-int ticksL = 0;
-int ticksR = 0;
+volatile float botP[2];
+volatile float botTheta;
 
-volatile int posX = 0;
-volatile int posY = 0;
-volatile int posTheta = 0;
+volatile int ticksL = 0;
+volatile int ticksR = 0;
 
 int scanAngle[] = {-90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 int scan_cm[]   = {  0,   0,   0,   0,   0,   0,   0,   0,   0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
@@ -86,9 +87,9 @@ void updateSensor()
 
     pingFront = pingAngle(0);
 
-    drive_getTicks(&ticksL, &ticksR);
-    ticksL = ticksL - baseL;
-    ticksR = ticksR - baseR;
+    //drive_getTicks(&ticksL, &ticksR);
+    //ticksL = ticksL - baseL;
+    //ticksR = ticksR - baseR;
 
   //}
 }
@@ -155,3 +156,63 @@ int irRight()
   return(ir);
 }
 
+/*
+void updatePose()
+{
+  int newL, newR;
+  int deltaL, deltaR;
+  drive_getTicks(&newL, &newR);
+  print ("ticksL = %d ticksR = %d%c\n", ticksL, ticksR, CLREOL);
+  print ("newL = %d newR = %d%c\n", newL, newR, CLREOL);
+  deltaL = newL - ticksL;
+  deltaR = newR - ticksR;
+  print ("deltaL = %d deltaR = %d%c\n", deltaL, deltaR, CLREOL);
+
+  botP[0] += (3.25 * (deltaL + deltaR) / 2.0) * cos(botTheta);
+  botP[1] += (3.25 * (deltaL + deltaR) / 2.0) * sin(botTheta);;
+  botTheta += (33.1/105.8) * (deltaR - deltaL);
+
+  ticksL = newL;
+  ticksR = newR;
+}
+*/
+void updatePose()
+{
+  int newL = 0;
+  int newR = 0;
+  int deltaL, deltaR;
+
+  float R, omega_dt;
+  float ICC[2];
+  float L = 105.8;
+  float step = 3.25;
+  float X, Y;
+
+  drive_getTicks(&newL, &newR);
+  print ("newL = %d newR = %d%c\n", newL, newR, CLREOL);
+  deltaL = newL - ticksL;
+  deltaR = newR - ticksR;
+  print ("deltaL = %d deltaR = %d%c\n", deltaL, deltaR, CLREOL);
+
+  if (deltaL == deltaR) {
+    X = botP[0] + deltaL * step * cos(botTheta);
+    Y = botP[1] + deltaL * step * sin(botTheta);
+    omega_dt = 0.0;
+
+  } else {
+    R = (L/2.0) * (deltaR + deltaL) / (deltaR - deltaL);
+    omega_dt = (deltaR - deltaL) * step / L;
+    ICC[0] = botP[0] - R * sin(botTheta);
+    ICC[1] = botP[1] + R * cos(botTheta);
+    X = ICC[0] + (botP[0]-ICC[0])*cos(omega_dt) - (botP[1]-ICC[1])*sin(omega_dt);
+    Y = ICC[1] + (botP[0]-ICC[0])*sin(omega_dt) + (botP[1]-ICC[1])*cos(omega_dt);
+  }
+
+  botP[0] = X;
+  botP[1] = Y;
+  botTheta += omega_dt;
+
+  ticksL = newL;
+  ticksR = newR;
+  print ("ticksL = %d ticksR = %d%c\n", ticksL, ticksR, CLREOL);
+}

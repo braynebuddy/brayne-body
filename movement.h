@@ -13,7 +13,7 @@ void botSetSpeed(int s);
 void botSetDeltaSpeed(int d);
 
 void botSetVW(float velocity, float omega);
-float pid_omega(float deltaX, float deltaY, float theta);
+float pid_omega(float deltaX, float deltaY);
 
 volatile extern int botSpeed;
 

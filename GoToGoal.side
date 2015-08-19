@@ -2,6 +2,10 @@ GoToGoal.c
 movement.c
 botports.h
 movement.h
+sensors.c
+sensors.h
+transforms.c
+transforms.h
 >compiler=C
 >memtype=cmm main ram compact
 >optimize=-Os
