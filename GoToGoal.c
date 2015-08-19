@@ -56,10 +56,11 @@ int main()                                    // Main function
 
     // calculate pose of goal in bot coordinate frame
     aTb(goalW, goalB, botP[0], botP[1], botTheta);
-    print("goal at (%f,%f), theta: %f %c\n",goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
+    print("goal(W) at (%f,%f), theta: %f %c\n",goalW[0], goalW[1], atan2(goalW[1],goalW[0]), CLREOL);
+    print("goal(B) at (%f,%f), theta: %f %c\n",goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
 
     // calculate omega
-    omega = pid_omega(goalB[0], goalB[1]);
+    omega = pid_omega(goalB);
     print ("omega = %f%c\n",omega,CLREOL);
 
     // calculate maximum velocity for this omega
@@ -69,6 +70,7 @@ int main()                                    // Main function
     botSetVW(velocity, omega);
 
     print("Pausing...%c\n",CLREOL);
-    pause(500);
+    cycle += 1;
+    pause(100);
   } // End of while()
 } // End of main()

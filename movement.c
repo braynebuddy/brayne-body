@@ -221,13 +221,13 @@ void botSetVW(float vel, float omega)
   print("botSetVW: done%c\n", CLREOL);
 }
 
-float pid_omega(float deltaX, float deltaY)
+float pid_omega(float xy[2])
 {
-  print ("deltaX = %f deltaY = %f%c\n", deltaX, deltaY, CLREOL);
-  // deltaX and deltaY are in bot coordinate frame, so current bot
+  print ("xy = (%f,%f)%c\n", xy[0], xy[1], CLREOL);
+  // The goal (x,y) is in bot coordinate frame, so current bot
   // theta = 0 by definition.
-  float Kc = -0.9;
-  float Ki = -0.02;
+  float Kc = -1.0;
+  float Ki = -0.5;
   float Kd = 0.0;
 
   static float e_sum = 0.0;
@@ -238,14 +238,14 @@ float pid_omega(float deltaX, float deltaY)
   float omega;
 
   // Make sure |e| < PI
-  e = 0 - atan2(deltaY, deltaX);
+  e = 0.0 - atan2(xy[1], xy[0]);
   if (e < -M_PI) e = e + 2.0*M_PI;
   if (e >  M_PI) e = e - 2.0*M_PI;
 
-  e_dot = e - old_e;
+  e_dot = (e - old_e)/0.1;
   old_e = e;
 
-  e_sum += e;
+  e_sum += e * 0.1;
 
   print ("e = %f, e_sum = %f, e_dot = %f%c\n", e, e_sum, e_dot, CLREOL);
   omega = Kc * e + Ki * e_sum + Kd * e_dot;
