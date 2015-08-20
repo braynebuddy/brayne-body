@@ -22,10 +22,20 @@
 
 void aTb(float aP[2], float bP[2], float x, float y, float theta)
 {
-  // aP[] is the point wrt coord frame A
-  // bP[] is the point wrt coord frame b
-  // (x,y) is the translation from A to B
+  // aP[] is the point wrt coord frame A --->(out)
+  // bP[] is the point wrt coord frame b <---(in)
+  // (x,y) is the translation of B origin wrt A
   // theta is the rotation of B wrt A 
-  bP[0] = aP[0]*cos(theta) - aP[1]*sin(theta) + x;
-  bP[1] = aP[0]*sin(theta) + aP[1]*cos(theta) + y;
+  aP[0] = bP[0]*cos(theta) - bP[1]*sin(theta) + x;
+  aP[1] = bP[0]*sin(theta) + bP[1]*cos(theta) + y;
+}
+
+void aTb_inv(float aP[2], float bP[2], float x, float y, float theta)
+{
+  // aP[] is the point wrt coord frame A <---(in)
+  // bP[] is the point wrt coord frame b --->(out)
+  // (x,y) is the translation of B origin wrt A
+  // theta is the rotation of B wrt A 
+  bP[0] = (aP[0]-x)*cos(theta) + (aP[1]-y)*sin(theta);
+  bP[1] = -(aP[0]-x)*sin(theta) + (aP[1]-y)*cos(theta);
 }

@@ -40,11 +40,11 @@ int main()                                    // Main function
   freqout(4, 250, 3500);
 
   // Set up some variables we will need
-  botSetMaxSpeed(64);
-  botSetRampRate(24);
+  botSetMaxSpeed(128);
+  botSetRampRate(12);
   pingAngle(0);
  
-  while(goalD > 5.0)
+  while(goalD > 10.0)
   {
     print("%c", HOME);
     print("Cycle: %d%c\n", cycle, CLREOL);
@@ -55,7 +55,7 @@ int main()                                    // Main function
     print("bot at (%f,%f), theta: %f %c\n",botP[0], botP[1], botTheta, CLREOL);
 
     // calculate pose of goal in bot coordinate frame
-    aTb(goalW, goalB, botP[0], botP[1], botTheta);
+    aTb_inv(goalW, goalB, botP[0], botP[1], botTheta);
     print("goal(W) at (%f,%f), theta: %f %c\n",goalW[0], goalW[1], atan2(goalW[1],goalW[0]), CLREOL);
     print("goal(B) at (%f,%f), theta: %f %c\n",goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
 
@@ -64,7 +64,8 @@ int main()                                    // Main function
     print ("omega = %f%c\n",omega,CLREOL);
 
     // calculate maximum velocity for this omega
-    velocity = goalD<200.0 ? goalD/2.0 : 100.0;
+    velocity = goalD<200.0 ? goalD : 200.0;
+    velocity = velocity<33.0 ? 33.0 : velocity;
 
     // set velocity and omega
     botSetVW(velocity, omega);
@@ -73,4 +74,7 @@ int main()                                    // Main function
     cycle += 1;
     pause(100);
   } // End of while()
+  print("Stopping...%c\n",CLREOL);
+  botSetSpeed(0);
+  print("Stopped%c\n",CLREOL);
 } // End of main()

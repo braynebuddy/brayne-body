@@ -170,7 +170,7 @@ void botSetSpeed(int s)
   leftSpeed = s;
   rightSpeed = s;
   
-  drive_ramp(leftSpeed, rightSpeed);
+  drive_speed(leftSpeed, rightSpeed);
 }
 
 void botMove(int mm)
@@ -226,7 +226,7 @@ float pid_omega(float xy[2])
   print ("xy = (%f,%f)%c\n", xy[0], xy[1], CLREOL);
   // The goal (x,y) is in bot coordinate frame, so current bot
   // theta = 0 by definition.
-  float Kc = -1.0;
+  float Kc = -6.0;
   float Ki = -0.5;
   float Kd = 0.0;
 
