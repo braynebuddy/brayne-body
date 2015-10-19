@@ -36,13 +36,17 @@
 #endif 
 #define M_2PI (2.0*M_PI)
 
-volatile int botMaxSpeed = 128;   // ticks/s
-volatile int botMinSpeed = 10;   // ticks/s
-volatile int botSpeed;      // ticks/s
-volatile int leftSpeed;     // ticks/s
-volatile int rightSpeed;    // ticks/s
+volatile int maxSpeed = 128;   // ticks/s
+volatile int minSpeed = 0;     // ticks/s
+volatile int botSpeed;         // ticks/s
+volatile int leftSpeed;        // ticks/s
+volatile int rightSpeed;       // ticks/s
 
-int turnTicks(float a)
+// ----------------------------------------------
+// Local helper functions.
+// ----------------------------------------------
+
+int _turnTicks(float a)
 {
   // Calculate the number of extra ticks (+ or -) needed to cause the ActivityBot 
   // to turn by the requested angle. Assume incoming angle is in bot 
@@ -68,23 +72,127 @@ int turnTicks(float a)
   return (t);
 }
 
-void botTurnAngle(float a)
+int _setDelta(int deltaSpeed)
 {
-  // Stop the ActivityBot and turn the requested number of degrees.
+  // Set the right and left wheel speeds to achieve a deltaSpeed
+  // difference with no change in the current speed. If that's not
+  // possible, reduce the speed to achieve deltaSpeed specified.
+  // Function returns the speed achieved at the requested delta
+
+  // Sanity checks on requested deltaSpeed
+  if (deltaSpeed < -2*maxSpeed) deltaSpeed = -2 * maxSpeed;
+  if (deltaSpeed > 2*maxSpeed) deltaSpeed = 2 * maxSpeed;
+
+  // Figure out the limits on average speed given requested delta
+  int hiSpeed = (deltaSpeed>0) ? (maxSpeed-deltaSpeed/2) : (maxSpeed+deltaSpeed/2);
+
+  // Reduce speed if necessary
+  if (botSpeed > hiSpeed) botSpeed = hiSpeed;
+  if (botSpeed < -hiSpeed) botSpeed = -hiSpeed;
+
+  rightSpeed = botSpeed + deltaSpeed/2;
+  leftSpeed = rightSpeed - deltaSpeed;
+
+  // Final check to make sure left wheel speed is within limits 
+  if (leftSpeed < -maxSpeed) leftSpeed = -maxSpeed;
+  if (leftSpeed > maxSpeed) leftSpeed = maxSpeed;
+
+  // Set the bot to the requested deltaSpeed
+  botSpeed = (rightSpeed + leftSpeed)/2;
+  return (botSpeed);
+}
+
+int _setSpeed(int s)
+{
+  // Set the left and right wheel speeds to achieve an
+  // overall speed of "s" ticks/sec while maintaining
+  // the current right-left difference if possible. If
+  // that's not possible, reduce the wheel speed difference
+  // to achieve the overall speed.
+  // Function returns the delta speed achieved at the requested speed
+
+  // Sanity checks on requested speed
+  if (s < -maxSpeed) s = -maxSpeed;
+  if (s > 2*maxSpeed) s = maxSpeed;
+
+  // Figure out the limits on delta speed given requested speed
+  int hiDelta = (s>0) ? 2*(maxSpeed-s) : 2*(maxSpeed+s);
+
+  // Reduce delta speed if necessary
+  int delta = rightSpeed - leftSpeed;
+  if (delta > hiDelta) delta = hiDelta;
+  if (delta < -hiDelta) delta = -hiDelta;
+
+  rightSpeed = s + delta/2;
+  leftSpeed = rightSpeed - delta;
+  
+  // Final check to make sure left wheel speed is within limits 
+  if (leftSpeed < -maxSpeed) leftSpeed = -maxSpeed;
+  if (leftSpeed > maxSpeed) leftSpeed = maxSpeed;
+
+  // Clean up variables and return delta achieved at requested speed.
+  botSpeed = (leftSpeed + rightSpeed)/2;
+  return (delta);
+}
+
+// ----------------------------------------------
+// Functions intended to be called from outside.
+// ----------------------------------------------
+
+void botStop()
+{
+  leftSpeed = 0;
+  rightSpeed = 0;
+  botSpeed = 0;
+  drive_speed(0,0);
+  drive_goto(0,0);
+}
+  
+void botSetSpeed(float vel)
+{
+  // Set the current speed to "vel" mm/s
+  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
+  int s;
+  if (vel < 3.25) vel = 0.0;
+  s = round(vel * 4.0/13.0);
+  _setSpeed(s);
+  drive_speed(leftSpeed, rightSpeed);
+}
+  
+void botTurn(float a)
+{
+  // Stop the ActivityBot and turn the requested angle (in radians).
   // Assume we want half of the turn on each wheel.
 
   int l_ticks = 0;
   int r_ticks = 0;
   int turn_ticks = 0;
 
-  drive_ramp(0,0); // Stop bot
+  drive_speed(0,0); // Stop bot
+  leftSpeed = 0;
+  rightSpeed = 0;
   botSpeed = 0;
 
-  turn_ticks = turnTicks(a);
+  turn_ticks = _turnTicks(a);
   r_ticks = turn_ticks / 2;
   l_ticks = r_ticks - turn_ticks;
 
   drive_goto(l_ticks, r_ticks); // Turn in place
+}
+
+void botMove(int mm)
+{
+  // Stop the ActivityBot and move the requested distance (in mm).
+
+  // Encoder ticks are 3.25 mm/tick, so 13 cm = 4 ticks
+  int ticks = mm * 4 / 13;
+
+  drive_speed(0,0); // Stop bot
+  leftSpeed = 0;
+  rightSpeed = 0;
+  botSpeed = 0;
+
+  drive_goto(ticks, ticks);
 }
 
 void botSetMaxSpeed(int s)
@@ -94,7 +202,7 @@ void botSetMaxSpeed(int s)
   // ActivityBot maximum wheel speed is 128 ticks/s = 416 mm/s
   if ( s > 416 ) s = 416;
   if ( s < -416 ) s = -416;
-  botMaxSpeed = s * 4/13;
+  maxSpeed = s * 4/13;
 
   //print("botSetMaxSpeed: s = %d mm/sec (%d ticks/s) %c\n", s, s*4/13, CLREOL);
   drive_setMaxSpeed(s * 4/13);
@@ -108,65 +216,6 @@ void botSetRampRate(int r)
   drive_setRampStep(r*4/13);
 }
 
-void botSetDeltaSpeed(int deltaSpeed)
-{
-  // Set the right and left wheel speeds to achieve a deltaSpeed
-  // difference with no change in the current speed. If that's not
-  // possible, reduce the speed to achieve deltaSpeed specified.
-
-  if (deltaSpeed < -2*maxSpeed) deltaSpeed = -2 * maxSpeed;
-  if (deltaSpeed > 2*maxSpeed) deltaSpeed = 2 * maxSpeed;
-
-  rightSpeed = botSpeed + deltaSpeed/2;
-  leftSpeed = rightSpeed - deltaSpeed;
-
-  // TODO Resume here @@
-
-  if (rightSpeed < -maxSpeed) rightSpeed = -maxSpeed;
-  if (rightSpeed > maxSpeed) rightSpeed = maxSpeed;
-
-  botSpeed = (rightSpeed + leftSpeed)/2;
-  drive_speed(leftSpeed, rightSpeed);
-}
-
-void botSetSpeed(int s)
-{
-  // Set the left and right wheel speeds to achieve an
-  // overall speed of "s" ticks/sec while maintaining
-  // the current right-left difference if possible. If
-  // that's not possible, reduce the wheel speed difference
-  // to achieve the overall speed.
-
-  int current = (leftSpeed + rightSpeed)/2;
-  int currentDelta = rightSpeed - leftSpeed;
-
-  if (s < -maxSpeed) s = -maxSpeed;
-  if (s > maxSpeed) s = maxSpeed;
-
-  rightSpeed += s - current;
-  leftSpeed += s - current;
-  
-  if (rightSpeed < -maxSpeed) {
-    rightSpeed = -maxSpeed;
-    leftSpeed = 2 * s - rightSpeed;
-  }
-  if (rightSpeed > maxSpeed) {
-    rightSpeed = maxSpeed;
-    leftSpeed = 2 * s - rightSpeed;
-  }
-  if (leftSpeed < -maxSpeed) {
-    leftSpeed = -maxSpeed;
-    rightSpeed = 2 * s - leftSpeed;
-  }
-  if (leftSpeed > maxSpeed) {
-    leftSpeed = maxSpeed;
-    rightSpeed = 2 * s - leftSpeed;
-  }
-  
-  botSpeed = (leftSpeed + rightSpeed)/2;
-  drive_speed(leftSpeed, rightSpeed);
-}
-
 void botRotation(float omega)
 {
   // Set the ActivityBot's rate of rotation to omega radians/sec
@@ -178,17 +227,10 @@ void botRotation(float omega)
   float L = 105.8;  // Wheel spacing = 105.8 mm
   float R = 33.1;   // Wheel radius = 33.1 mm
 
-  botSetDeltaSpeed(round(omega * L / 3.25));
-}
+  _setDelta(round(omega * L / 3.25));
 
-void botMove(int mm)
-{
-  // Encoder ticks are 3.25 mm/tick, so 13 cm = 4 ticks
-  int ticks = mm * 4 / 13;
-
-  //ticks = (int)((float)mm/3.25 + 0.5);
-
-  drive_goto(ticks, ticks);
+  // Set the bot to the requested angular velocity
+  drive_speed(leftSpeed, rightSpeed);
 }
 
 void botSetVW(float vel, float omega)
@@ -202,13 +244,16 @@ void botSetVW(float vel, float omega)
   if (vel < 3.25) vel = 0.0;
   botSpeed = round(vel/3.25);
   botRotation(omega);
+
+  // Set the bot to the requested velocities
+  // drive_speed(leftSpeed, rightSpeed);
 }
 
 float pid_omega(float xy[2])
 {
   // The goal (x,y) is in bot coordinate frame, so current bot
   // theta = 0 by definition.
-  float Kc = -6.0;
+  float Kc = -2.0;
   float Ki = -0.0;
   float Kd = 0.0;
 

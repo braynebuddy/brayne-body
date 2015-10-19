@@ -26,7 +26,7 @@ int main()                                    // Main function
   botP[1] = 0.0;
   botTheta = 0.0;
 
-  float goalW[] = {500.0, 400};    // Goal in world coordinate frame (gx,gy)
+  float goalW[] = {500.0, 400.0};   // Goal in world coordinate frame (gx,gy)
   float goalB[2];                   // Goal in Bot coordinate frame
   float goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
 
@@ -52,29 +52,39 @@ int main()                                    // Main function
     // update current pose in world coordinate frame
     updatePose();
     goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
-    print("bot at (%f,%f), theta: %f %c\n",botP[0], botP[1], botTheta, CLREOL);
+    print("bot at (%f,%f), theta: %f %c\n", botP[0], botP[1], botTheta, CLREOL);
 
     // calculate pose of goal in bot coordinate frame
     aTb_inv(goalW, goalB, botP[0], botP[1], botTheta);
-    print("goal(W) at (%f,%f), theta: %f %c\n",goalW[0], goalW[1], atan2(goalW[1],goalW[0]), CLREOL);
-    print("goal(B) at (%f,%f), theta: %f %c\n",goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
+    print("goal(W) at (%f,%f), theta: %f %c\n", goalW[0], goalW[1], atan2(goalW[1],goalW[0]), CLREOL);
+    print("goal(B) at (%f,%f), theta: %f %c\n", goalB[0], goalB[1], atan2(goalB[1],goalB[0]), CLREOL);
 
     // calculate omega
     omega = pid_omega(goalB);
-    print ("omega = %f%c\n",omega,CLREOL);
+    print("omega = %f%c\n", omega, CLREOL);
 
     // calculate maximum velocity for this omega
     velocity = goalD<200.0 ? goalD : 200.0;
     velocity = velocity<33.0 ? 33.0 : velocity;
+    print("velocity = %f%c\n", velocity, CLREOL);
 
     // set velocity and omega
     botSetVW(velocity, omega);
 
-    print("Pausing...%c\n",CLREOL);
-    cycle += 1;
+    print("goalD =%f%c\n", goalD, CLREOL);
+    print("Pausing...%c\n", CLREOL);
     pause(100);
+    cycle += 1;
   } // End of while()
-  print("Stopping...%c\n",CLREOL);
-  botSetSpeed(0);
-  print("Stopped%c\n",CLREOL);
+
+  print("botSpeed =%f (%f, %f)%c\n", botSpeed, leftSpeed, rightSpeed, CLREOL);
+
+  print("Stopping...%c\n", CLREOL);
+  botSetSpeed(0.0);
+  print("botSpeed =%d (%d, %d)%c\n", botSpeed, leftSpeed, rightSpeed, CLREOL);
+  print("Stopped%c\n", CLREOL);
+  botStop();
+  print("botSpeed =%d (%d, %d)%c\n", botSpeed, leftSpeed, rightSpeed, CLREOL);
+  botMove(0);
+  print("botSpeed =%d (%d, %d)%c\n", botSpeed, leftSpeed, rightSpeed, CLREOL);
 } // End of main()
