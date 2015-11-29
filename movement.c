@@ -28,14 +28,6 @@
 #include "botports.h"                         // Ports in use for the ActivityBot
 #include "movement.h"                         // Move the ActivityBot around
 
-#define round(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
-
-// PI = 3.1415926535897932384626433832795 (probably defined in <math.h>)
-#ifndef M_PI
-#define M_PI  3.141592654
-#endif 
-#define M_2PI (2.0*M_PI)
-
 volatile int maxSpeed = 128;   // ticks/s
 volatile int minSpeed = 0;     // ticks/s
 volatile int botSpeed;         // ticks/s
@@ -135,6 +127,14 @@ int _setSpeed(int s)
   return (delta);
 }
 
+void _driveSpeed(int left, int right) {
+  drive_speed(left+LSERVOBIAS, right+RSERVOBIAS);
+}
+
+void _driveGoto(int left, int right) {
+  drive_goto(left, right);
+}
+
 // ----------------------------------------------
 // Functions intended to be called from outside.
 // ----------------------------------------------
@@ -144,8 +144,8 @@ void botStop()
   leftSpeed = 0;
   rightSpeed = 0;
   botSpeed = 0;
-  drive_speed(0,0);
-  drive_goto(0,0);
+  //_driveSpeed(0,0);
+  _driveGoto(0,0);
 }
   
 void botSetSpeed(float vel)

@@ -69,9 +69,9 @@ void updateSensor()
   drive_getTicks(&baseL, &baseR);
   ticksL = 0;
   ticksR = 0;
-  pingLeft = pingAngle(90);
-  pingRight = pingAngle(-90);
-  pingFront = pingAngle(0);
+  pingLeft = 30;
+  pingRight = 30;
+  //pingFront = pingAngle(0);
 
   //while (1)
   //{
