@@ -20,22 +20,25 @@
 #include "botports.h"                         // Ports in use for the ActivityBot
 #include "transforms.h"                       // Coordinate frame transforms
 
-void aTb(float aP[2], float bP[2], float x, float y, float theta)
+void aTb(float aP[2], float bP[2], float b[3])
 {
-  // aP[] is the point wrt coord frame A --->(out)
-  // bP[] is the point wrt coord frame b <---(in)
-  // (x,y) is the translation of B origin wrt A
-  // theta is the rotation of B wrt A 
-  aP[0] = bP[0]*cos(theta) - bP[1]*sin(theta) + x;
-  aP[1] = bP[0]*sin(theta) + bP[1]*cos(theta) + y;
+  // In:
+  // bP[] is (x,y) of the point wrt coord frame b
+  // b[] is (x,y,theta) of B wrt A 
+  // Out:
+  // aP[] is (x,y) of the point wrt coord frame A
+
+  aP[0] = bP[0]*cos(b[2]) - bP[1]*sin(theta) + b[0];
+  aP[1] = bP[0]*sin(b[2]) + bP[1]*cos(theta) + b[1];
 }
 
-void aTb_inv(float aP[2], float bP[2], float x, float y, float theta)
+void aTb_inv(float aP[2], float bP[2], float b[3])
 {
-  // aP[] is the point wrt coord frame A <---(in)
-  // bP[] is the point wrt coord frame b --->(out)
-  // (x,y) is the translation of B origin wrt A
-  // theta is the rotation of B wrt A 
-  bP[0] = (aP[0]-x)*cos(theta) + (aP[1]-y)*sin(theta);
-  bP[1] = -(aP[0]-x)*sin(theta) + (aP[1]-y)*cos(theta);
+  // In:
+  // aP[] is (x,y) of the point wrt coord frame A
+  // b[] is (x,y,theta) of B wrt A 
+  // Out:
+  // bP[] is (x,y) of the point wrt coord frame b
+  bP[0] = (aP[0]-b[0])*cos(b[2]) + (aP[1]-b[1])*sin(b[2]);
+  bP[1] = -(aP[0]-b[0])*sin(b[2]) + (aP[1]-b[1])*cos(b[2]);
 }

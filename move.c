@@ -1,5 +1,5 @@
 /*
-  movement.c
+  move.c
 
   Cause the ActivityBot to move in a variety of ways.
 
@@ -19,6 +19,7 @@
   2015-08-29   3.0  Remove old non-functional routines, standardize units
                     to be mm for distance, radians for angles, ticks for 
                     wheel speeds
+  2015-12-01   3.1  Clean up more old code. Rename to move.c
 
 */
 #include <math.h>                             // Needed for atan2() and M_PI
@@ -26,7 +27,9 @@
 #include "simpletools.h"                      // Include simpletools header
 #include "abdrive.h"                          // Include abdrive header
 #include "botports.h"                         // Ports in use for the ActivityBot
-#include "movement.h"                         // Move the ActivityBot around
+#include "move.h"                             // Move the ActivityBot around
+#include "transforms.h"                       // Coordinate transforms
+#include "slam.h"                             // Localization, Mapping, and Coordinates
 
 volatile int maxSpeed = 128;   // ticks/s
 volatile int minSpeed = 0;     // ticks/s
@@ -141,24 +144,13 @@ void _driveGoto(int left, int right) {
 
 void botStop()
 {
+  // Stop the ActivityBot by setting the wheel speeds to zero
   leftSpeed = 0;
   rightSpeed = 0;
   botSpeed = 0;
-  //_driveSpeed(0,0);
-  _driveGoto(0,0);
+  drive_speed(0,0);
 }
-  
-void botSetSpeed(float vel)
-{
-  // Set the current speed to "vel" mm/s
-  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
-  int s;
-  if (vel < 3.25) vel = 0.0;
-  s = round(vel * 4.0/13.0);
-  _setSpeed(s);
-  drive_speed(leftSpeed, rightSpeed);
-}
-  
+
 void botTurn(float a)
 {
   // Stop the ActivityBot and turn the requested angle (in radians).
@@ -178,6 +170,7 @@ void botTurn(float a)
   l_ticks = r_ticks - turn_ticks;
 
   drive_goto(l_ticks, r_ticks); // Turn in place
+
 }
 
 void botMove(int mm)
@@ -216,7 +209,18 @@ void botSetRampRate(int r)
   drive_setRampStep(r*4/13);
 }
 
-void botRotation(float omega)
+void botSetSpeed(float vel)
+{
+  // Set the current speed to "vel" mm/s
+  // Encoder ticks are 3.25 mm/tick, so 13 mm = 4 ticks
+  int s;
+  if (vel < 3.25) vel = 0.0;
+  s = round(vel * 4.0/13.0);
+  _setSpeed(s); // Calc wheel speeds, modify delta speed if necessary
+  drive_speed(leftSpeed, rightSpeed);
+}
+  
+void botSetRotation(float omega)
 {
   // Set the ActivityBot's rate of rotation to omega radians/sec
   // The ActivityBot width is 105.8 mm, or 32.554 ticks
@@ -227,7 +231,7 @@ void botRotation(float omega)
   float L = 105.8;  // Wheel spacing = 105.8 mm
   float R = 33.1;   // Wheel radius = 33.1 mm
 
-  _setDelta(round(omega * L / 3.25));
+  _setDelta(round(omega * L / 3.25)); // Calc wheel speeds, modify avg speed if necessary
 
   // Set the bot to the requested angular velocity
   drive_speed(leftSpeed, rightSpeed);
@@ -236,48 +240,77 @@ void botRotation(float omega)
 void botSetVW(float vel, float omega)
 {
   // Set wheel speeds so that ActivityBot moves at linear velocity (mm/s)
-  // and angular velocity omega (rad/s)
+  // and angular velocity omega (rad/s). If both are not possible, angular
+  // velocity takes precedence.
 
   float leftV;
   float rightV;
 
   if (vel < 3.25) vel = 0.0;
-  botSpeed = round(vel/3.25);
-  botRotation(omega);
-
-  // Set the bot to the requested velocities
-  // drive_speed(leftSpeed, rightSpeed);
+  botSpeed = round(vel/3.25); // Set target speed
+  botSetRotation(omega);  // Set wheel speeds to achieve target omega
 }
 
 float pid_omega(float xy[2])
 {
-  // The goal (x,y) is in bot coordinate frame, so current bot
-  // theta = 0 by definition.
+  // Calculate the angular rotation of the ActivityBot based on a target (x,y)
+  // position for the bot. The target is in bot coordinate frame, so current bot
+  // pose is (x,y) = (0,0) theta = 0 by definition.
+
+  // PID tuning parameters
   float Kc = -2.0;
   float Ki = -0.0;
   float Kd = 0.0;
-
+  // cyle-to-cycle errors
   static float e_sum = 0.0;
   static float old_e = 0.0;
-
+  // current errors
   float e;
   float e_dot;
   float omega;
 
-  //print ("xy = (%f,%f)%c\n", xy[0], xy[1], CLREOL);
-
-  // Make sure |e| < PI
+  // The error is the difference between the current bot heading and the
+  // direction to the target.
   e = 0.0 - atan2(xy[1], xy[0]);
+
+  // Make sure |e| < PI to avoid instability (+PI same as -PI)
   if (e < -M_PI) e = e + 2.0*M_PI;
   if (e >  M_PI) e = e - 2.0*M_PI;
 
   e_dot = (e - old_e)/0.1;
-  old_e = e;
-
   e_sum += e * 0.1;
 
-  //print ("e = %f, e_sum = %f, e_dot = %f%c\n", e, e_sum, e_dot, CLREOL);
   omega = Kc * e + Ki * e_sum + Kd * e_dot;
+  old_e = e;
 
   return omega;
-} 
+}
+
+void goTowardPose(float goal[3])
+{
+  // Move toward a position in world coordinate frame
+
+  float goalW[] = {goal[0], goal[1]};   // Goal in world coordinate frame (gx,gy)
+  float goalB[2];                   // Goal in Bot coordinate frame
+  float goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
+
+  float velocity;                   // Bot velocity in mm/s
+  float omega;                      // Bot angular rotation in 1/s
+
+  if(goalD > 10.0)
+  {
+    // calculate pose of goal in bot coordinate frame
+    aTb_inv(goalW, goalB, botP);
+    // calculate angular velocity, omega
+    omega = pid_omega(goalB);
+    // calculate desired velocity based on distance from goal
+    velocity = goalD<200.0 ? goalD : 200.0;
+    velocity = velocity<33.0 ? 33.0 : velocity;
+    // set velocity and omega
+    botSetVW(velocity, omega);
+  } else {
+    // We are "close" to goal (x,y), so turn to requested theta
+    botTurn(goal[2] - botP[2]);
+    
+  }
+}

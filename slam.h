@@ -3,9 +3,13 @@
 #ifndef _SLAM_H_
 #define _SLAM_H_
 
-void updatePose();
+// --- Coordinate transforms
+void aTb(float aP[2], float bP[2], float b[3]);
+void aTb_inv(float aP[2], float bP[2], float b[3]);
 
-extern float botP[2];
-extern float botTheta;
+// --- Localization
+extern float botP[3];
+
+void updatePose();
 
 #endif

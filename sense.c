@@ -29,7 +29,7 @@
 #include "abdrive.h"                          // Include abdrive header
 
 #include "botports.h"                         // Ports in use for the ActivityBot
-#include "sensors.h"                          // Function declarations
+#include "sense.h"                            // Function declarations
 
 // --- PING))) sensor
 int pingerAngle = 900;
