@@ -21,12 +21,13 @@
 
 #include "botports.h"                         // Ports in use for the ActivityBot
 #include "slam.h"                             // Function declarations
+#include "sense.h"                            // Manage sensors in use on the ActivityBot
 
 // --- ActivityBot current pose (x,y,theta)
 float botP[3];
 
 // --- Coordinate Transforms
-void aTb(float aP[2], float bP[2], float b[3])
+void aTb(float *aP, float *bP, float *b)
 {
   // In:
   // bP[] is (x,y) of the point wrt coord frame b
@@ -34,11 +35,11 @@ void aTb(float aP[2], float bP[2], float b[3])
   // Out:
   // aP[] is (x,y) of the point wrt coord frame A
 
-  aP[0] = bP[0]*cos(b[2]) - bP[1]*sin(theta) + b[0];
-  aP[1] = bP[0]*sin(b[2]) + bP[1]*cos(theta) + b[1];
+  aP[0] = bP[0]*cos(b[2]) - bP[1]*sin(b[2]) + b[0];
+  aP[1] = bP[0]*sin(b[2]) + bP[1]*cos(b[2]) + b[1];
 }
 
-void aTb_inv(float aP[2], float bP[2], float b[3])
+void aTb_inv(float *aP, float *bP, float *b)
 {
   // In:
   // aP[] is (x,y) of the point wrt coord frame A

@@ -66,7 +66,9 @@ void updateSensor()
 {
   detectLeft = irLeft();
   detectRight = irRight();
-  updateTicks();
+  //updateTicks();
+  pingerAngle = 900;
+  pingFront = pingAngle(pingerAngle);
 }
 
 int pingHere()

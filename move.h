@@ -17,7 +17,6 @@ int turnTicks(int a);
 
 void botRotation(float omega);
 void botTurnAngle(int angle);
-void botTurnHeading(int angle, int duration);
 
 void botMove(int distance_cm);
 void botTurn(float a);
@@ -31,4 +30,6 @@ void botSetSpeed(float mmps);
 void botSetVW(float velocity, float omega);
 float pid_omega(float xy[2]);
 
+void executePlan(float plan[2]);
+void goTowardPose(float goal[3]);
 #endif

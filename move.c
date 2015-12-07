@@ -31,11 +31,11 @@
 #include "transforms.h"                       // Coordinate transforms
 #include "slam.h"                             // Localization, Mapping, and Coordinates
 
-volatile int maxSpeed = 128;   // ticks/s
-volatile int minSpeed = 0;     // ticks/s
-volatile int botSpeed;         // ticks/s
-volatile int leftSpeed;        // ticks/s
-volatile int rightSpeed;       // ticks/s
+int maxSpeed = 128;   // ticks/s
+int minSpeed = 0;     // ticks/s
+int botSpeed;         // ticks/s
+int leftSpeed;        // ticks/s
+int rightSpeed;       // ticks/s
 
 // ----------------------------------------------
 // Local helper functions.
@@ -88,9 +88,11 @@ int _setDelta(int deltaSpeed)
   rightSpeed = botSpeed + deltaSpeed/2;
   leftSpeed = rightSpeed - deltaSpeed;
 
-  // Final check to make sure left wheel speed is within limits 
+  // Final checks to make sure wheel speeds are within limits 
   if (leftSpeed < -maxSpeed) leftSpeed = -maxSpeed;
   if (leftSpeed > maxSpeed) leftSpeed = maxSpeed;
+  if (rightSpeed < -maxSpeed) rightSpeed = -maxSpeed;
+  if (rightSpeed > maxSpeed) rightSpeed = maxSpeed;
 
   // Set the bot to the requested deltaSpeed
   botSpeed = (rightSpeed + leftSpeed)/2;
@@ -108,7 +110,7 @@ int _setSpeed(int s)
 
   // Sanity checks on requested speed
   if (s < -maxSpeed) s = -maxSpeed;
-  if (s > 2*maxSpeed) s = maxSpeed;
+  if (s > maxSpeed) s = maxSpeed;
 
   // Figure out the limits on delta speed given requested speed
   int hiDelta = (s>0) ? 2*(maxSpeed-s) : 2*(maxSpeed+s);
@@ -121,9 +123,11 @@ int _setSpeed(int s)
   rightSpeed = s + delta/2;
   leftSpeed = rightSpeed - delta;
   
-  // Final check to make sure left wheel speed is within limits 
+  // Final checks to make sure wheel speeds are within limits 
   if (leftSpeed < -maxSpeed) leftSpeed = -maxSpeed;
   if (leftSpeed > maxSpeed) leftSpeed = maxSpeed;
+  if (rightSpeed < -maxSpeed) rightSpeed = -maxSpeed;
+  if (rightSpeed > maxSpeed) rightSpeed = maxSpeed;
 
   // Clean up variables and return delta achieved at requested speed.
   botSpeed = (leftSpeed + rightSpeed)/2;
@@ -223,15 +227,21 @@ void botSetSpeed(float vel)
 void botSetRotation(float omega)
 {
   // Set the ActivityBot's rate of rotation to omega radians/sec
-  // The ActivityBot width is 105.8 mm, or 32.554 ticks
-  // omega = (rightSpeed - leftSpeed) / botWidth
-  // so,
-  // rightSpeed - leftSpeed = deltaSpeed = omega * botWidth
+  // The ActivityBot width is 105.8 mm, the wheel radius is 33.1 mm,
+  // and one wheel rotation is 64 ticks.
+  // omega = (rightSpeed - leftSpeed) * radius / botWidth
 
   float L = 105.8;  // Wheel spacing = 105.8 mm
   float R = 33.1;   // Wheel radius = 33.1 mm
+  int C = 64;       // Wheel rotation = 64 ticks;
 
-  _setDelta(round(omega * L / 3.25)); // Calc wheel speeds, modify avg speed if necessary
+  float deltaV;     // Wheel speed difference (mm/s)
+  int deltaT;       // Wheel speed difference (ticks/s)
+
+  deltaV = omega * L / R;
+  deltaT = round( deltaV * C / (2.0*M_PI*R));
+ 
+  _setDelta(deltaT); // Calc wheel speeds, modify avg speed if necessary
 
   // Set the bot to the requested angular velocity
   drive_speed(leftSpeed, rightSpeed);
@@ -285,6 +295,23 @@ float pid_omega(float xy[2])
 
   return omega;
 }
+void executePlan(float plan[2])
+{
+  // Convert a "plan" (dx, dy) into bot angular and linear velocities
+  // using the approach taken in the Georgia Tech Robot Control course.
+
+  // Tuning parameter:
+  float el = 50.0;
+  // Outputs:
+  float velocity;                   // Bot velocity in mm/s
+  float omega;                      // Bot angular rotation in rad/s
+  
+  velocity = plan[0]*cos(-botP[2]) - plan[1]*sin(-botP[2]);
+  omega = (plan[0]*sin(-botP[2]) + plan[1]*cos(-botP[2]))/el;
+
+  // convert to wheel speeds and implement.
+  botSetVW(velocity, omega);
+}
 
 void goTowardPose(float goal[3])
 {
@@ -295,7 +322,7 @@ void goTowardPose(float goal[3])
   float goalD = sqrt(pow(goalW[0]-botP[0],2.0) + pow(goalW[1]-botP[1],2.0));
 
   float velocity;                   // Bot velocity in mm/s
-  float omega;                      // Bot angular rotation in 1/s
+  float omega;                      // Bot angular rotation in rad/s
 
   if(goalD > 10.0)
   {
